@@ -1,3 +1,5 @@
+<img src="assets/icon/icon.svg" width="96" alt="">
+
 # Presentations
 
 Talks and group-meeting decks by Nathan Herling (UA ATLAS HEP Group). Every deck plays in the browser and can be downloaded as a **PDF**, a **PowerPoint (.pptx)** file, or a **single self-contained HTML** file.
@@ -17,6 +19,7 @@ index.html                 landing page: one card per deck (Present / PDF / PPTX
 catalog.js                 generated list of decks for the landing page
 assets/
   site.css, site.js        landing page
+  icon/                    repo icon: icon.svg (square), icon-wide.svg, PNGs at 512 and 32 px, social-preview-1200x800.png
   player.css, player.js    the slide player, shared by every deck
   templates/player.html    template for each deck's index.html
 decks/<id>/
@@ -82,3 +85,7 @@ Then add a row to the table above and commit. GitHub rejects files over 100 MB; 
 ## Publishing on GitHub Pages
 
 Settings → Pages → Build and deployment → Source: **Deploy from a branch**, branch `main`, folder `/ (root)`. All links are relative, so the site works under `https://<user>.github.io/<repo>/`. The empty `.nojekyll` file tells Pages to serve the files as they are.
+
+## Icon
+
+`assets/icon/` holds the repo icon (a black dot over a purple one, transparent background). It is the site's favicon. To use it as the GitHub social preview, upload `social-preview-1200x800.png` under Settings → General → Social preview.
