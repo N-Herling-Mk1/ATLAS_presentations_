@@ -8,7 +8,7 @@ It is a static site: plain HTML, CSS and JS, no build step to serve it, no frame
 
 | Date | Deck | Slides |
 |---|---|---|
-| 30 Oct 2026, updated 3 Nov 2026 | [DisCo + the queen: closure gained, AUC paid](decks/2026-11-03_qn2-disco-vs-queen/) | 19 |
+| 30 Oct 2026, updated 3 Nov 2026 | [DisCo + the queen: closure gained, AUC paid](decks/2026-11-03_qn2-disco-vs-queen/) | 20 |
 
 ## Layout
 
@@ -57,6 +57,18 @@ python tools/deck_tool.py add path/to/deck.zip \
 ```
 
 The title comes from the HTML `<title>` (or the PPTX, or `--title`). The id defaults to `<updated or date>_<file-stem>`; set it with `--id`. If there is no image folder, the PDF pages are rendered instead (needs PyMuPDF or poppler's `pdftoppm`).
+
+### A new revision of an existing deck
+
+Do not drop a new file into `downloads/`: the player, thumbnails, PDF, PPTX and notes would still be the old version. Run:
+
+```bash
+python tools/deck_tool.py update 2026-11-03_qn2-disco-vs-queen path/to/new_deck.html   # or a folder / .zip
+```
+
+SOURCE can be the one-file HTML player alone: the slides are taken out of it. `update` keeps the deck's title, tags and dates (override any with the same flags as `add`), keeps the download file names, builds a PDF and an image-per-slide PPTX when the source has none, and carries the speaker notes over by matching each new slide to the old one it came from (diff-style, in order). It prints the match table; slides marked NEW get empty notes, to fill in `deck.json`, then `build`.
+
+### Editing a deck
 
 To change a deck later, edit its `deck.json` and run:
 

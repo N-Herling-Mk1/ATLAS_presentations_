@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
-"""Add presentations to this repo and rebuild the generated files.
+"""Add presentations to this repo, revise them, and rebuild the generated files.
 
-  python tools/deck_tool.py add SOURCE [options]   # SOURCE: a folder or a .zip holding a deck
-  python tools/deck_tool.py build                  # rewrite every deck's index.html + deck.js, and catalog.js
-  python tools/deck_tool.py list                   # show the decks in the repo
+  python tools/deck_tool.py add SOURCE [options]       # a new deck
+  python tools/deck_tool.py update ID SOURCE [options] # a new revision of an existing deck (keeps its metadata)
+  python tools/deck_tool.py build                      # rewrite every deck's index.html + deck.js, and catalog.js
+  python tools/deck_tool.py list                       # show the decks in the repo
 
-What `add` looks for inside SOURCE (any depth):
-  slides      a folder of slide images (slides/s-01.png ...); if there is none, the PDF pages are rendered
-              (needs PyMuPDF or poppler's pdftoppm)
-  *.pdf       offered as the PDF download
-  *.pptx      offered as the PowerPoint download; its speaker notes feed the player's notes panel
-  *single_file*.html   offered as the one-file HTML download
+SOURCE is a folder, a .zip, or a single one-file .html player. What is used from it:
+  slides      a folder of slide images (slides/s-01.png ...); else the images embedded in the one-file HTML;
+              else the PDF pages rendered (needs PyMuPDF or poppler's pdftoppm)
+  *.pdf       the PDF download             } when missing, built from the slide images
+  *.pptx      the PowerPoint download      }   (turn off with --no-generate)
+              its speaker notes feed the player's notes panel
+  *.html      the one-file HTML download (*single_file*.html inside a folder/zip, or SOURCE itself)
   README*.txt kept beside the deck as source_README.txt
+
+Downloads are stored under fixed names <stem>.pdf / <stem>.pptx / <stem>_single_file.html, so links to a deck's
+files survive revisions. `update` carries speaker notes over to the new slides by matching each new slide image to
+the most similar old one (renumbering "Slide N of M."); slides with no match get empty notes and are listed.
 
 Every deck lives in decks/<id>/ with deck.json as its hand-editable source of truth. After editing a
 deck.json (title, tags, notes, ...) run `build`. Needs Python 3.8+; Pillow for thumbnails (optional),
@@ -97,7 +103,7 @@ def image_size(p: Path) -> tuple[int, int] | None:
 
 def html_title(p: Path) -> str | None:
     with open(p, "r", encoding="utf-8", errors="ignore") as f:
-        head = f.read(4096)
+        head = f.read(20000)                       # some exports put <title> late
     m = re.search(r"<title>(.*?)</title>", head, re.S | re.I)
     return html.unescape(m.group(1).strip()) if m else None
 
@@ -178,121 +184,358 @@ def pptx_title(pptx: Path) -> str | None:
         return None
 
 
+# ---------------------------------------------------------------- reading a source
+DATA_URI = re.compile(r"data:image/(png|jpe?g|webp);base64,([A-Za-z0-9+/=]+)")
+
+
+def html_slides(page: Path, out: Path) -> list[Path]:
+    """Pull the slide images out of a one-file HTML player (base64 data URIs, in order)."""
+    import base64
+    s = page.read_text(encoding="utf-8", errors="ignore")
+    m = re.search(r"window\.SLIDES\s*=\s*\[(.*?)\]\s*;", s, re.S)    # the player's slide list, if present
+    uris = DATA_URI.findall(m.group(1) if m else s)
+    out.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for i, (ext, b64) in enumerate(uris, 1):
+        p = out / f"s-{i:02d}.{'jpg' if ext.startswith('jp') else ext}"
+        p.write_bytes(base64.b64decode(b64))
+        paths.append(p)
+        bar(i, len(uris), "slides extracted from the HTML")
+    return paths
+
+
+class Source:
+    """Everything found in a SOURCE (folder, .zip or one-file .html)."""
+
+    def __init__(self, path: str):
+        self.path = Path(path).expanduser().resolve()
+        self.tmp: list[Path] = []
+        if not self.path.exists():
+            die(f"not found: {self.path}")
+        if self.path.is_file() and self.path.suffix.lower() == ".zip":
+            root = self._tmpdir("deck_")
+            safe_extract(self.path, root)
+            info(f"unzipped to {root}")
+        elif self.path.is_file() and self.path.suffix.lower() in (".html", ".htm"):
+            root = None
+        elif self.path.is_dir():
+            root = self.path
+        else:
+            die("SOURCE must be a folder, a .zip, or a one-file .html player")
+
+        if root is None:
+            self.root = self.path.parent
+            self.pdf = self.pptx = self.readme = self.slide_dir = None
+            self.html = self.path
+        else:
+            self.root = root
+            self.pdf = first(root, "*.pdf")
+            self.pptx = first(root, "*.pptx")
+            self.html = first(root, "*single_file*.html") or first(root, "*single*.html")
+            self.readme = first(root, "README*.txt") or first(root, "README*.md")
+            self.slide_dir = find_slide_dir(root)
+        for label, p in (("slides", self.slide_dir), ("pdf", self.pdf), ("pptx", self.pptx), ("html", self.html), ("readme", self.readme)):
+            info(f"{label:7s}: {p.name if p and label != 'slides' else (p.relative_to(self.root) if p else '-')}")
+
+    def _tmpdir(self, prefix: str) -> Path:
+        d = Path(tempfile.mkdtemp(prefix=prefix))
+        self.tmp.append(d)
+        return d
+
+    def slides(self) -> list[Path]:
+        """Slide images, in order: an image folder first, else the one-file HTML, else the PDF rendered."""
+        if self.slide_dir:
+            return sorted([p for p in self.slide_dir.iterdir() if p.is_file() and p.suffix.lower() in IMG_EXT], key=natural_key)
+        if self.html:
+            got = html_slides(self.html, self._tmpdir("htmlslides_"))
+            if got:
+                return got
+            warn("no embedded slide images in the HTML")
+        if self.pdf:
+            info("no image folder: rendering the PDF")
+            return render_pdf(self.pdf, self._tmpdir("pdfpages_"))
+        die("no slide images, no one-file HTML with slides, and no PDF to render")
+        return []
+
+    def title(self) -> str | None:
+        for cand in [self.html, self.slide_dir and self.slide_dir.parent / "index.html"]:
+            if cand and cand.exists():
+                t = html_title(cand)
+                if t:
+                    return t
+        return pptx_title(self.pptx) if self.pptx else None
+
+    def cleanup(self) -> None:
+        for d in self.tmp:
+            shutil.rmtree(d, ignore_errors=True)
+
+
+# ---------------------------------------------------------------- generating PDF / PPTX from slide images
+def make_pdf(slides: list[Path], out: Path) -> bool:
+    if Image is None:
+        warn("Pillow not installed: cannot build the PDF")
+        return False
+    pages = []
+    for i, p in enumerate(slides, 1):
+        with Image.open(p) as im:
+            pages.append(im.convert("RGB"))
+        bar(i, len(slides), "PDF pages")
+    w = pages[0].size[0]
+    pages[0].save(out, "PDF", save_all=True, append_images=pages[1:], resolution=w / 13.333)   # 13.333 in wide, like PowerPoint 16:9
+    return True
+
+
+def make_pptx(slides: list[Path], notes: list[str], out: Path) -> bool:
+    try:
+        from pptx import Presentation
+        from pptx.util import Emu
+    except ImportError:
+        warn("python-pptx not installed: cannot build the PPTX")
+        return False
+    size = image_size(slides[0]) or (16, 9)
+    pres = Presentation()
+    pres.slide_width = Emu(12192000)
+    pres.slide_height = Emu(round(12192000 * size[1] / size[0]))
+    blank = pres.slide_layouts[6]
+    for i, p in enumerate(slides):
+        s = pres.slides.add_slide(blank)
+        s.shapes.add_picture(str(p), 0, 0, width=pres.slide_width, height=pres.slide_height)
+        if i < len(notes) and notes[i]:
+            s.notes_slide.notes_text_frame.text = notes[i]
+        bar(i + 1, len(slides), "PPTX slides")
+    pres.save(str(out))
+    return True
+
+
+# ---------------------------------------------------------------- carrying notes across a revision
+# Slide difference = mean grey-level difference (0-255) between 64x36 copies. On the QN2 revision: unchanged slides
+# 0.1-0.9, slides with a label added 2.0-4.1, different slides 5.2 and up. That margin alone is too thin for
+# text-on-white slides, so matches are also forced to keep the slide order (a diff-style alignment, below).
+SAME, EDITED, GAP = 1.2, 7.0, 6.0
+
+
+def _sig(p: Path):
+    with Image.open(p) as im:
+        return im.convert("L").resize((64, 36), Image.BILINEAR).tobytes()
+
+
+def match_slides(new: list[Path], old: list[Path]) -> list[tuple[int | None, float]]:
+    """Align new slides to old ones, keeping order (like diff): each new slide gets (old index, difference) or
+    (None, smallest difference to any old slide) when it is a slide the old deck did not have."""
+    O = [_sig(p) for p in old]
+    C = []
+    for i, p in enumerate(new, 1):
+        a = _sig(p)
+        C.append([sum(abs(x - y) for x, y in zip(a, b)) / len(a) for b in O])
+        bar(i, len(new), "slides compared")
+    n, m = len(new), len(old)
+    INF = float("inf")
+    D = [[INF] * (m + 1) for _ in range(n + 1)]       # D[i][j]: best cost aligning new[:i] with old[:j]
+    D[0] = [j * GAP for j in range(m + 1)]
+    for i in range(1, n + 1):
+        D[i][0] = i * GAP
+        for j in range(1, m + 1):
+            c = C[i - 1][j - 1]
+            D[i][j] = min(D[i - 1][j] + GAP,                                   # new slide i inserted
+                          D[i][j - 1] + GAP,                                   # old slide j dropped
+                          D[i - 1][j - 1] + c if c <= EDITED else INF)         # same slide, maybe edited
+    out: list[tuple[int | None, float]] = [(None, 0.0)] * n
+    i, j = n, m
+    while i > 0:
+        c = C[i - 1][j - 1] if j > 0 else INF
+        if j > 0 and c <= EDITED and D[i][j] == D[i - 1][j - 1] + c:
+            out[i - 1] = (j - 1, c); i -= 1; j -= 1
+        elif D[i][j] == D[i - 1][j] + GAP:
+            out[i - 1] = (None, min(C[i - 1]) if m else 0.0); i -= 1
+        else:
+            j -= 1
+    return out
+
+
+def renumber(note: str, i: int, n: int) -> str:
+    return re.sub(r"^Slide \d+ of \d+\.", f"Slide {i} of {n}.", note)
+
+
+# ---------------------------------------------------------------- installing slides + downloads into a deck folder
+def install_slides(dest: Path, imgs: list[Path]) -> tuple[list[Path], tuple[int, int]]:
+    if (dest / "slides").exists():
+        shutil.rmtree(dest / "slides")
+    if (dest / "thumbs").exists():
+        shutil.rmtree(dest / "thumbs")
+    (dest / "slides").mkdir(parents=True)
+    slides = []
+    for i, p in enumerate(imgs, 1):
+        out = dest / "slides" / f"s-{i:02d}{p.suffix.lower()}"
+        shutil.copy2(p, out)
+        slides.append(out)
+        bar(i, len(imgs), "slides")
+    sizes = {image_size(p) for p in slides} - {None}
+    ratios = {round(w / h, 3) for w, h in sizes}
+    if len(ratios) > 1:
+        warn(f"slides have different aspect ratios: {sorted(ratios)}")
+    if len(sizes) > 1:
+        info(f"slide pixel sizes vary ({', '.join(f'{w}x{h}' for w, h in sorted(sizes))}); same ratio, fine")
+    w, h = min(sizes) if sizes else (16, 9)
+    return slides, (w, h)
+
+
+def install_downloads(dest: Path, src: Source, stem: str, slides: list[Path], notes: list[str], generate: bool) -> dict:
+    """Copy the source's PDF / PPTX / HTML under fixed names <stem>.pdf, <stem>.pptx, <stem>_single_file.html.
+    Missing PDF/PPTX are built from the slide images when `generate` is on. Returns deck.json's `files`."""
+    dl = dest / "downloads"
+    if dl.exists():
+        shutil.rmtree(dl)
+    dl.mkdir()
+    files, made = {}, []
+    names = {"pdf": f"{stem}.pdf", "pptx": f"{stem}.pptx", "html": f"{stem}_single_file.html"}
+    for kind, p in (("pdf", src.pdf), ("pptx", src.pptx), ("html", src.html)):
+        if p:
+            check_size(p)
+            shutil.copyfile(p, dl / names[kind])                 # copyfile: do not carry read-only bits over
+            files[kind] = f"downloads/{names[kind]}"
+            info(f"{kind:5s} {names[kind]}  ({mb(p.stat().st_size)}, from the source)")
+    if generate and "pdf" not in files and make_pdf(slides, dl / names["pdf"]):
+        files["pdf"] = f"downloads/{names['pdf']}"
+        made.append("pdf")
+    if generate and "pptx" not in files and make_pptx(slides, notes, dl / names["pptx"]):
+        files["pptx"] = f"downloads/{names['pptx']}"
+        made.append("pptx")
+    for kind in made:
+        p = dl / names[kind]
+        check_size(p)
+        info(f"{kind:5s} {names[kind]}  ({mb(p.stat().st_size)}, built from the slide images)")
+    if "html" not in files:
+        info("html  none in the source: no one-file HTML download for this deck")
+    return files
+
+
+def write_meta(dest: Path, meta: dict) -> None:
+    (dest / "deck.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
 # ---------------------------------------------------------------- add
 def cmd_add(a: argparse.Namespace) -> None:
     S = 6
-    src_in = Path(a.source).expanduser().resolve()
-    if not src_in.exists():
-        die(f"not found: {src_in}")
-
-    tmp = None
-    step(1, S, f"Reading {src_in.name}")
-    if src_in.is_file() and src_in.suffix.lower() == ".zip":
-        tmp = Path(tempfile.mkdtemp(prefix="deck_"))
-        safe_extract(src_in, tmp)
-        src = tmp
-        info(f"unzipped to {tmp}")
-    elif src_in.is_dir():
-        src = src_in
-    else:
-        die("SOURCE must be a folder or a .zip")
-
+    step(1, S, f"Reading {Path(a.source).name}")
+    src = Source(a.source)
     try:
-        step(2, S, "Finding slides and downloads")
-        pdf = first(src, "*.pdf")
-        pptx = first(src, "*.pptx")
-        single = first(src, "*single_file*.html") or first(src, "*single*.html")
-        readme = first(src, "README*.txt") or first(src, "README*.md")
-        slide_dir = find_slide_dir(src)
-        for label, p in (("slides", slide_dir), ("pdf", pdf), ("pptx", pptx), ("html", single), ("readme", readme)):
-            info(f"{label:7s}: {p.relative_to(src) if p else '-'}")
-
-        title = a.title
-        if not title:
-            for cand in [single, slide_dir and slide_dir.parent / "index.html"]:
-                if cand and cand.exists():
-                    title = html_title(cand)
-                    if title:
-                        break
-        if not title and pptx:
-            title = pptx_title(pptx)
-        stem = (pdf or pptx or single or src_in).stem
+        step(2, S, "Choosing id and title")
+        title = a.title or src.title()
+        stem = a.name or (src.pdf or src.pptx or src.html or src.path).stem.replace("_single_file", "")
         title = title or stem
         date = a.date or dt.date.today().isoformat()
         deck_id = a.id or f"{a.updated or date}_{slugify(stem)}"
         dest = DECKS / deck_id
         if dest.exists():
             if not a.force:
-                die(f"decks/{deck_id} already exists (use --force to replace it, or --id for a new id)")
+                die(f"decks/{deck_id} already exists: use `update {deck_id} SOURCE` for a new revision, "
+                    f"--force to start it over, or --id for a new deck")
             shutil.rmtree(dest)
         info(f"id     : {deck_id}")
         info(f"title  : {title}")
 
         step(3, S, "Copying slide images")
-        (dest / "slides").mkdir(parents=True)
-        if slide_dir:
-            imgs = sorted([p for p in slide_dir.iterdir() if p.is_file() and p.suffix.lower() in IMG_EXT], key=natural_key)
-        elif pdf:
-            info("no image folder: rendering the PDF")
-            imgs = render_pdf(pdf, Path(tempfile.mkdtemp(prefix="pdfpages_")))
-        else:
-            die("no slide images and no PDF to render them from")
-        slides = []
-        for i, p in enumerate(imgs, 1):
-            out = dest / "slides" / f"s-{i:02d}{p.suffix.lower()}"
-            shutil.copy2(p, out)
-            slides.append(out)
-            bar(i, len(imgs), "slides")
-        sizes = {image_size(p) for p in slides} - {None}
-        ratios = {round(w / h, 3) for w, h in sizes}
-        if len(ratios) > 1:
-            warn(f"slides have different aspect ratios: {sorted(ratios)}")
-        if len(sizes) > 1:
-            info(f"slide pixel sizes vary ({', '.join(f'{w}x{h}' for w, h in sorted(sizes))}); same ratio, fine")
+        slides, (w, h) = install_slides(dest, src.slides())
 
         step(4, S, "Making thumbnails")
         make_thumbs(dest)
 
-        step(5, S, "Copying downloads and reading speaker notes")
-        (dest / "downloads").mkdir()
-        files = {}
-        for kind, p in (("pdf", pdf), ("pptx", pptx), ("html", single)):
-            if p:
-                check_size(p)
-                shutil.copy2(p, dest / "downloads" / p.name)
-                files[kind] = f"downloads/{p.name}"
-                info(f"{kind:5s} {p.name}  ({mb(p.stat().st_size)})")
-        if readme:
-            shutil.copy2(readme, dest / ("source_README" + readme.suffix))
-        notes = pptx_notes(pptx) if pptx else []
+        step(5, S, "Reading speaker notes; downloads")
+        notes = pptx_notes(src.pptx) if src.pptx else []
         if notes:
             info(f"notes on {sum(1 for n in notes if n)} of {len(notes)} slides")
             if len(notes) != len(slides):
-                warn(f"PPTX has {len(notes)} slides but {len(slides)} images were found; notes are matched by position")
+                warn(f"PPTX has {len(notes)} slides but there are {len(slides)} images; notes are matched by position")
+        files = install_downloads(dest, src, stem, slides, notes, not a.no_generate)
+        if src.readme:
+            shutil.copy2(src.readme, dest / ("source_README" + src.readme.suffix))
 
         step(6, S, "Writing deck.json, index.html, deck.js, catalog.js")
-        w, h = next(iter(sizes)) if sizes else (16, 9)
-        meta = {
-            "id": deck_id,
-            "title": title,
-            "subtitle": a.subtitle or "",
-            "author": a.author or "",
-            "date": date,
-            "updated": a.updated or "",
-            "description": a.description or "",
+        write_meta(dest, {
+            "id": deck_id, "title": title, "subtitle": a.subtitle or "", "author": a.author or "",
+            "date": date, "updated": a.updated or "", "description": a.description or "",
             "tags": [t.strip() for t in (a.tags or "").split(",") if t.strip()],
-            "width": w,
-            "height": h,
-            "files": files,
-            "notes": notes,
-        }
-        (dest / "deck.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        build_deck(dest)
+            "width": w, "height": h, "files": files, "notes": notes,
+        })
         write_catalog()
         print(f"\nDone: decks/{deck_id}/  ({len(slides)} slides). Open index.html to check it, then commit.")
     finally:
-        if tmp:
-            shutil.rmtree(tmp, ignore_errors=True)
+        src.cleanup()
+
+
+# ---------------------------------------------------------------- update
+def cmd_update(a: argparse.Namespace) -> None:
+    S = 7
+    dest = DECKS / a.id
+    if not (dest / "deck.json").exists():
+        die(f"no deck decks/{a.id}/ (see `list`); use `add` for a new deck")
+    meta = json.loads((dest / "deck.json").read_text(encoding="utf-8"))
+
+    step(1, S, f"Reading {Path(a.source).name}")
+    src = Source(a.source)
+    keep = Path(tempfile.mkdtemp(prefix="oldslides_"))
+    try:
+        step(2, S, "Collecting the new slides")
+        new = src.slides()
+        old = sorted([p for p in (dest / "slides").iterdir() if p.suffix.lower() in IMG_EXT], key=natural_key)
+        old = [Path(shutil.copy2(p, keep / p.name)) for p in old]
+        old_notes = meta.get("notes") or []
+        info(f"{len(old)} slides now -> {len(new)} slides in the revision")
+
+        step(3, S, "Matching new slides to old ones")
+        notes: list[str]
+        if src.pptx:
+            notes = pptx_notes(src.pptx)
+            info("notes taken from the revision's PPTX")
+            match = None
+        elif Image is None:
+            warn("Pillow not installed: cannot match slides, so no notes are carried over")
+            match, notes = None, [""] * len(new)
+        else:
+            match = match_slides(new, old)
+            notes = []
+            print("      new  <- old   diff  status            size")
+            for i, (k, d) in enumerate(match, 1):
+                ns = image_size(new[i - 1])
+                if k is None:
+                    status, note = "NEW (no notes)", ""
+                else:
+                    status = "same" if d <= SAME else "edited"
+                    note = renumber(old_notes[k], i, len(new)) if k < len(old_notes) else ""
+                    os_ = image_size(old[k])
+                    if ns and os_ and ns[0] < os_[0]:
+                        status += f", lower res than before ({os_[0]}x{os_[1]})"
+                notes.append(note)
+                print(f"      {i:3d}  <- {('-' if k is None else k + 1):>3}  {d:5.1f}  {status:16s}  {ns[0]}x{ns[1]}" if ns else "")
+            dropped = sorted(set(range(len(old))) - {k for k, _ in match if k is not None})
+            if dropped:
+                info(f"old slides with no match in the revision (dropped or rewritten): {', '.join(str(k + 1) for k in dropped)}")
+
+        step(4, S, "Replacing slide images")
+        slides, (w, h) = install_slides(dest, new)
+
+        step(5, S, "Making thumbnails")
+        make_thumbs(dest)
+
+        step(6, S, "Downloads")
+        old_files = meta.get("files") or {}
+        stem = a.name or next((Path(v).stem.replace("_single_file", "") for v in old_files.values()), slugify(a.id))
+        files = install_downloads(dest, src, stem, slides, notes, not a.no_generate)
+
+        step(7, S, "Writing deck.json, index.html, deck.js, catalog.js")
+        for k in ("title", "subtitle", "author", "date", "description"):
+            if getattr(a, k):
+                meta[k] = getattr(a, k)
+        if a.tags:
+            meta["tags"] = [t.strip() for t in a.tags.split(",") if t.strip()]
+        meta["updated"] = a.updated or meta.get("updated") or dt.date.today().isoformat()
+        meta.update({"width": w, "height": h, "files": files, "notes": notes})
+        write_meta(dest, meta)
+        write_catalog()
+        print(f"\nDone: decks/{a.id}/ now has {len(slides)} slides. Check the notes in deck.json for the slides marked NEW, then commit.")
+    finally:
+        src.cleanup()
+        shutil.rmtree(keep, ignore_errors=True)
 
 
 def make_thumbs(dest: Path) -> None:
@@ -399,8 +642,20 @@ def main() -> None:
     ad.add_argument("--updated", help="YYYY-MM-DD of the latest revision, if any")
     ad.add_argument("--description")
     ad.add_argument("--tags", help="comma separated")
+    ad.add_argument("--name", help="file stem for the downloads (default: the source's PDF/PPTX/HTML name)")
+    ad.add_argument("--no-generate", action="store_true", help="do not build a missing PDF/PPTX from the slides")
     ad.add_argument("--force", action="store_true", help="replace an existing deck with the same id")
     ad.set_defaults(fn=cmd_add)
+    up = sub.add_parser("update", help="replace a deck's slides and downloads with a new revision")
+    up.add_argument("id", help="the deck's folder name under decks/")
+    up.add_argument("source")
+    for f in ("--title", "--subtitle", "--author", "--date", "--description"):
+        up.add_argument(f)
+    up.add_argument("--updated", help="YYYY-MM-DD of this revision (default: keep the current value, else today)")
+    up.add_argument("--tags", help="comma separated; replaces the current tags")
+    up.add_argument("--name", help="file stem for the downloads (default: keep the current names)")
+    up.add_argument("--no-generate", action="store_true", help="do not build a missing PDF/PPTX from the slides")
+    up.set_defaults(fn=cmd_update)
     sub.add_parser("build", help="regenerate deck pages and catalog.js").set_defaults(fn=cmd_build)
     sub.add_parser("list", help="list decks").set_defaults(fn=cmd_list)
     a = ap.parse_args()

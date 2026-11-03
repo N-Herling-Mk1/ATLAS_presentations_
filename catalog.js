@@ -16,23 +16,23 @@ window.CATALOG = {
     "ABCD",
     "DNCn_QN"
    ],
-   "slides": 19,
+   "slides": 20,
    "thumb": "thumbs/s-01.jpg",
    "files": {
+    "html": {
+     "path": "downloads/QN2_disco_vs_queen_single_file.html",
+     "name": "QN2_disco_vs_queen_single_file.html",
+     "bytes": 6770359
+    },
     "pdf": {
      "path": "downloads/QN2_disco_vs_queen.pdf",
      "name": "QN2_disco_vs_queen.pdf",
-     "bytes": 5184619
+     "bytes": 2184622
     },
     "pptx": {
      "path": "downloads/QN2_disco_vs_queen.pptx",
      "name": "QN2_disco_vs_queen.pptx",
-     "bytes": 5101966
-    },
-    "html": {
-     "path": "downloads/QN2_disco_vs_queen_single_file.html",
-     "name": "QN2_disco_vs_queen_single_file.html",
-     "bytes": 5647779
+     "bytes": 5041884
     }
    }
   }
