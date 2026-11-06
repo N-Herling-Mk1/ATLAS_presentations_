@@ -10,7 +10,11 @@ It is a static site: plain HTML, CSS and JS, no build step to serve it, no frame
 
 | Date | Deck | Slides |
 |---|---|---|
+| 5 Nov 2026 | [LEXICON mk_1: does a detector event have a grammar?](decks/2026-11-05_lexicon-mk1/) | 49 |
 | 30 Oct 2026, updated 3 Nov 2026 | [DisCo + the queen: closure gained, AUC paid](decks/2026-11-03_qn2-disco-vs-queen/) | 20 |
+| 15 Oct 2026 | [BEAM (agent): PIPE and HALO, idea and plan](decks/2026-10-15_beam-agent-idea-and-plan/) | 18 |
+| 14 Oct 2026 | [STAVE: Ideas to run on the barrel](decks/2026-10-14_stave-barrel-ideas/) | 18 |
+| 7 Oct 2026, updated 14 Oct 2026 | [Information theory for ATLAS data](decks/2026-10-07_information-theory-atlas-v0/) | 7 |
 
 ## Layout
 

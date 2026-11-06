@@ -1,0 +1,44 @@
+{
+  "id": "2026-10-14_stave-barrel-ideas",
+  "title": "STAVE: Ideas to run on the barrel",
+  "subtitle": "Small-sample Tests of ABCD Variants and Estimators · draft outline",
+  "author": "Nathan Herling",
+  "date": "2026-10-14",
+  "updated": "",
+  "description": "Re-run the barrel baseline first, then test four ideas against it: closure terms (the queen, DNC_FLR), a kernel classifier, endcap pretraining, and a kernel model of the joint background. Covers the four barrel problems, what 2,280 events can show, what ATLAS does, trainer hazards, diagnostics, order of work and open decisions.",
+  "tags": [
+    "ATLAS",
+    "LLP",
+    "STAVE",
+    "barrel",
+    "ABCD",
+    "DNCn_QN"
+  ],
+  "width": 2400,
+  "height": 1350,
+  "files": {
+    "pdf": "downloads/STAVE_barrel_ideas.pdf",
+    "pptx": "downloads/STAVE_barrel_ideas.pptx",
+    "html": "downloads/STAVE_barrel_ideas_single_file.html"
+  },
+  "notes": [
+    "STAVE: re-run the barrel baseline, then try closure terms (the queen, DNC_FLR), a kernel classifier, endcap pretraining, and a kernel joint background. Sources: Oct 5 literature pass, QUEEN_BARREL_HANDOFF_mk1, Aug sweeps, July DNC family notes. Nothing here is built yet.",
+    "Index. Slide numbers refer to the bottom-right page numbers.",
+    "A kernel only addresses A. B is a property of the sample. C and D are about the loss. Keep them separate or the tests get confounded.",
+    "Always quote |nc|med beside the gate. A barrel pass is weaker evidence than an endcap fail.",
+    "CMS does the same: DT and CSC clusters are separate categories with their own ABCD estimates. Barrel-from-endcap pretraining or a shared trunk would be new.",
+    "λ = 0 is the vanilla BCE rung. λ = 20 is added because the Aug sweep stopped at 10 with closure still falling. AUC cost at λ = 10 was 0.018 on NN1 and 0.033 on NN2.",
+    "Fix: a third split for checkpoint selection, validation loss in batch-sized chunks, seeded validation cuts. These go in before the factorial, otherwise the factorial inherits them.",
+    "If qn_active in the barrel is far below the endcap, the fix is a region-dependent threshold or larger background batches, not a new term. If tail counts are in the tens, the tail variants are dead on arrival.",
+    "Endcap contrast, replicated over 3 seeds: 0.147 to 0.021 on the trained grid at lambda 2, mu 1. Gain decays to 1.9x at the edge and 1.4x in the tail.",
+    "Debiased NonClosure, Floor-Recovered. The July plateau decodes to a residual of about 0.8 to 0.9 times sqrt(floor), which is the candidate nonclosure systematic. Plateau error bar was still pending a seeds rerun.",
+    "g and the delta-method floor are already computed inside the queen's _z_at_cut, so FLR is a small addition. factorial.py already accepts region = barrel. Record both closure statistics as diagnostics on every run, whichever term is active.",
+    "2 se of a difference between two cells = 2 x 0.1 x sqrt(2/n). The lambda and mu levels are a proposal; the Aug sweep only covered lambda 0 to 10 on the barrel.",
+    "Likely outcomes in order: loses or ties with no stability gain; ties on AUC with tighter spread, which is the realistic win; hybrid.",
+    "The [factor] is to be fixed before the run. Add the dependence penalty only if a kernel wins; then compare tail-weighted against unweighted with the kernel held fixed.",
+    "Variant 0 needs an endcap model that takes barrel rows: either retrain the endcap NNs on the shared features only, or map endcap-specific columns to their barrel counterparts. Variants 1 to 3 still train on barrel data. [n] = count of shared features, to be read off the registry.",
+    "June rebuilt-score closure for orientation: barrel 1.053, endcap 1.468. The 30-dimensional feature-space version is ambitious at 2,280 events; the score-plane version is the cheap first test.",
+    "Steps 1 to 4 are independent of each other once step 0 exists. Combining winners (for example a pretrained trunk with DNC_FLR) is a second round.",
+    "Item 3 matters because the two toolchains disagreed on the barrel operating point."
+  ]
+}

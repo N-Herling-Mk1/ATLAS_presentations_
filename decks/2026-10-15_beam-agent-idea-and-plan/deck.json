@@ -1,0 +1,43 @@
+{
+  "id": "2026-10-15_beam-agent-idea-and-plan",
+  "title": "BEAM (agent): PIPE and HALO, idea and plan",
+  "subtitle": "mk1 · one local archive of the ATLAS LLP record, with the agent built on it",
+  "author": "Nathan Herling",
+  "date": "2026-10-15",
+  "updated": "",
+  "description": "BEAM is the archive; BEAM PIPE is the agent that works through it; BEAM HALO is the batch job that finds links between sources that never cite each other. The idea, the mk1 light build and its gates, architecture, the agent loop, corpus tiers, canon vs superseded vs refuted, eleven phases with the retrieval eval as the gate, the sweep, training, estimates, step 1, and open decisions.",
+  "tags": [
+    "ATLAS",
+    "BEAM_AGENT",
+    "agent",
+    "retrieval",
+    "LLM"
+  ],
+  "width": 1920,
+  "height": 1080,
+  "files": {
+    "pdf": "downloads/BEAM_agent_idea_and_plan_mk1.pdf",
+    "pptx": "downloads/BEAM_agent_idea_and_plan_mk1.pptx",
+    "html": "downloads/BEAM_agent_idea_and_plan_mk1_single_file.html"
+  },
+  "notes": [
+    "BEAM is the archive. BEAM PIPE is the agent that works through it; BEAM HALO is the batch synthesis stage; BEAM VELOCITY folds Project Velocity into the agent design. Nothing is built yet; estimates are rough.",
+    "An agentic HALO would pick a promising link, read the sources behind it, and decide whether to dig deeper or drop it. Open-ended exploration is where small local models fail most, so it would likely need Claude as planner and be limited to public-tier material.",
+    "Steps 1 to 3 are BEAM, the archive. What I approve goes back into the library, so the archive grows with the work. The embeddings stay local and are only used to find passages; what reaches any LLM is plain text.",
+    "BEAM must pass the retrieval eval before either instrument is built. BEAM HALO files its hypotheses into the proposal queue that BEAM PIPE provides. HALO expansion proposed: Hypotheses from Associations and Latent Overlap. This is the design; nothing is built yet.",
+    "The index is where the gain comes from: tokenizing and embedding the library locally is what lets a short request become a dense, on-point prompt. The LLM receives plain text and tokenizes it again on its side. The agent loop and the LLM are swappable; the index is the durable part.",
+    "Suggested mix: one equation-heavy paper such as DisCo, one PDF-only two-column paper, one of my own markdown lock-in files, optionally the TEC paper, and one chapter such as the Gaussian-process chapter of Rasmussen and Williams. The 80% bar in G2 is a proposal, not settled. A miss is usually a split chunk, a mangled equation, or a wording mismatch.",
+    "Buys: all ten follow from the BEAM layer. Breaks: the first two are why prompts carry slightly more than the minimum and never a local-model paraphrase. The third is the risk to PIPE, the fourth the limit on HALO.",
+    "The Claude route needs an API key, billed separately from the claude.ai plan. Ollama versus llama.cpp is still an open choice.",
+    "If the local planner fails the eval, the fallback is Claude as planner with local retrieval as its tool, which works for public-tier material only.",
+    "Papers alone are roughly 100 to 1,000 pages. About 15 textbooks would add an estimated 5 to 10 million tokens, still easy for retrieval. Check collaboration policy before any internal excerpt goes to an external service.",
+    "Inferring \"superseded\" automatically would be wrong often enough to hurt, hence the hand-edited manifest. That choice is still to be confirmed.",
+    "If retrieval fails at phase 3, nothing downstream is worth building. The eval also has to show canon outranking superseded.",
+    "The bridges found here seed the sweep, so it runs on promising pairs first and not only the full cross product. Whether this yields anything non-obvious is unproven.",
+    "This is the one job where local beats Claude: unlimited calls at no cost per query. Runtime assumes 5 to 8 seconds per call, which is a guess until measured.",
+    "The standard free ML textbooks are already in every base model's training data, so fine-tuning on them adds little. Their value here is retrieval tied to a chapter and equation.",
+    "Estimates assume Claude writes the code and I run and debug on the home box. None of this is measured yet.",
+    "Papers first, with arXiv LaTeX source where it exists plus the PDF for page references. Textbooks trail behind. Install Ollama and pull models in parallel.",
+    "The paper list is what unblocks step 1."
+  ]
+}

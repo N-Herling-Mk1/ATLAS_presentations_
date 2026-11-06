@@ -1,0 +1,31 @@
+{
+  "id": "2026-10-07_information-theory-atlas-v0",
+  "title": "Information theory for ATLAS data",
+  "subtitle": "A section-by-section fit pass through Stone, 2nd ed. · v0 skeleton",
+  "author": "Nathan Herling",
+  "date": "2026-10-07",
+  "updated": "2026-10-14",
+  "description": "Working deck for the INFO_THEORY project: define entropy and mutual information in our own feature and latent spaces, the rating scheme for each section, the book in eleven chapters, where the analysis already touches it (BCE, dCor, MaxEnt, the quantile scaler), chapter 1, and open questions. Ratings not yet filled.",
+  "tags": [
+    "ATLAS",
+    "INFO_THEORY",
+    "information theory",
+    "entropy"
+  ],
+  "width": 2400,
+  "height": 1350,
+  "files": {
+    "pdf": "downloads/Information_Theory_ATLAS_v0.pdf",
+    "pptx": "downloads/Information_Theory_ATLAS_v0.pptx",
+    "html": "downloads/Information_Theory_ATLAS_v0_single_file.html"
+  },
+  "notes": [
+    "Starting point only. The worksheet is empty; this deck fills as we go through the book point by point.",
+    "Open from August: does any of this connect to the tokenization line in HELIX? Latent caveat: each fold trains its own trunk, so latent coordinates are not comparable across folds (H-REF-8).",
+    "Legend is taken straight from the worksheet in the contents file. 73 section rows to rate; introductions and summaries are left out unless one carries content.",
+    "The last column is my chapter-level guess from titles alone, not a rating. Section ratings come from the pass. Chapters 8 and 9 are new in the 2nd edition.",
+    "These are candidate mappings to test in the pass, not conclusions. The quantile point: NN1 endcap went .831 to .879 under a transform that cannot change MI, so the gain was optimisation access, not information content. Corner vs bulk: dCor is global, closure lives in the high-high corner; a pointwise/local information measure may be the right object there.",
+    "Fit and mapping columns are blank on purpose; they get filled in conversation. 1.1 is the introduction and is skipped per the worksheet.",
+    "Running list; add as they come up in the pass. Q4 comes from the August factorial: dCor unchanged while closure moved 7x. Q5 is the HELIX link raised in August."
+  ]
+}

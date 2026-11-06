@@ -2,6 +2,41 @@
 window.CATALOG = {
  "decks": [
   {
+   "id": "2026-11-05_lexicon-mk1",
+   "title": "LEXICON mk_1: does a detector event have a grammar?",
+   "subtitle": "Goals, tokens, all 82 proposed experiments and how they overlap, the exploratory record R0–R15, and the plan",
+   "author": "Nathan Herling",
+   "date": "2026-11-05",
+   "updated": "",
+   "description": "First LEXICON deck: three goals in plain words; BERT-style and GPT-style ideas and synergistic features; what a token is in detector data compared with LLM tokens, feature vs token vs event, why the token models use background only, the tokenizer methods, which runs used which tokenization and which model family, how a token is used BERT-style and GPT-style, and how good tokens are told from bad; every proposed experiment by goal with its source and status, how they overlap with each other and with GAMBIT, BASELINE, STAVE, SIG/BG Explorer, TRUSS and INFO_THEORY, and an experimental plan for synergistic features; the exploratory record R0–R15; registered predictions, run order and open decisions.",
+   "tags": [
+    "ATLAS",
+    "LLP",
+    "LEXICON",
+    "tokenization",
+    "ABCD"
+   ],
+   "slides": 49,
+   "thumb": "thumbs/s-01.jpg",
+   "files": {
+    "pdf": {
+     "path": "downloads/LEXICON_mk1.pdf",
+     "name": "LEXICON_mk1.pdf",
+     "bytes": 11365127
+    },
+    "pptx": {
+     "path": "downloads/LEXICON_mk1.pptx",
+     "name": "LEXICON_mk1.pptx",
+     "bytes": 5677284
+    },
+    "html": {
+     "path": "downloads/LEXICON_mk1_single_file.html",
+     "name": "LEXICON_mk1_single_file.html",
+     "bytes": 7788374
+    }
+   }
+  },
+  {
    "id": "2026-11-03_qn2-disco-vs-queen",
    "title": "DisCo + the queen: closure gained, AUC paid",
    "subtitle": "DNCn_QN mk2 on the endcap ABCD plane · R15 runs",
@@ -33,6 +68,111 @@ window.CATALOG = {
      "path": "downloads/QN2_disco_vs_queen.pptx",
      "name": "QN2_disco_vs_queen.pptx",
      "bytes": 5041884
+    }
+   }
+  },
+  {
+   "id": "2026-10-15_beam-agent-idea-and-plan",
+   "title": "BEAM (agent): PIPE and HALO, idea and plan",
+   "subtitle": "mk1 · one local archive of the ATLAS LLP record, with the agent built on it",
+   "author": "Nathan Herling",
+   "date": "2026-10-15",
+   "updated": "",
+   "description": "BEAM is the archive; BEAM PIPE is the agent that works through it; BEAM HALO is the batch job that finds links between sources that never cite each other. The idea, the mk1 light build and its gates, architecture, the agent loop, corpus tiers, canon vs superseded vs refuted, eleven phases with the retrieval eval as the gate, the sweep, training, estimates, step 1, and open decisions.",
+   "tags": [
+    "ATLAS",
+    "BEAM_AGENT",
+    "agent",
+    "retrieval",
+    "LLM"
+   ],
+   "slides": 18,
+   "thumb": "thumbs/s-01.jpg",
+   "files": {
+    "pdf": {
+     "path": "downloads/BEAM_agent_idea_and_plan_mk1.pdf",
+     "name": "BEAM_agent_idea_and_plan_mk1.pdf",
+     "bytes": 2374201
+    },
+    "pptx": {
+     "path": "downloads/BEAM_agent_idea_and_plan_mk1.pptx",
+     "name": "BEAM_agent_idea_and_plan_mk1.pptx",
+     "bytes": 2858446
+    },
+    "html": {
+     "path": "downloads/BEAM_agent_idea_and_plan_mk1_single_file.html",
+     "name": "BEAM_agent_idea_and_plan_mk1_single_file.html",
+     "bytes": 3656955
+    }
+   }
+  },
+  {
+   "id": "2026-10-07_information-theory-atlas-v0",
+   "title": "Information theory for ATLAS data",
+   "subtitle": "A section-by-section fit pass through Stone, 2nd ed. · v0 skeleton",
+   "author": "Nathan Herling",
+   "date": "2026-10-07",
+   "updated": "2026-10-14",
+   "description": "Working deck for the INFO_THEORY project: define entropy and mutual information in our own feature and latent spaces, the rating scheme for each section, the book in eleven chapters, where the analysis already touches it (BCE, dCor, MaxEnt, the quantile scaler), chapter 1, and open questions. Ratings not yet filled.",
+   "tags": [
+    "ATLAS",
+    "INFO_THEORY",
+    "information theory",
+    "entropy"
+   ],
+   "slides": 7,
+   "thumb": "thumbs/s-01.jpg",
+   "files": {
+    "pdf": {
+     "path": "downloads/Information_Theory_ATLAS_v0.pdf",
+     "name": "Information_Theory_ATLAS_v0.pdf",
+     "bytes": 89436
+    },
+    "pptx": {
+     "path": "downloads/Information_Theory_ATLAS_v0.pptx",
+     "name": "Information_Theory_ATLAS_v0.pptx",
+     "bytes": 40036
+    },
+    "html": {
+     "path": "downloads/Information_Theory_ATLAS_v0_single_file.html",
+     "name": "Information_Theory_ATLAS_v0_single_file.html",
+     "bytes": 1205430
+    }
+   }
+  },
+  {
+   "id": "2026-10-14_stave-barrel-ideas",
+   "title": "STAVE: Ideas to run on the barrel",
+   "subtitle": "Small-sample Tests of ABCD Variants and Estimators · draft outline",
+   "author": "Nathan Herling",
+   "date": "2026-10-14",
+   "updated": "",
+   "description": "Re-run the barrel baseline first, then test four ideas against it: closure terms (the queen, DNC_FLR), a kernel classifier, endcap pretraining, and a kernel model of the joint background. Covers the four barrel problems, what 2,280 events can show, what ATLAS does, trainer hazards, diagnostics, order of work and open decisions.",
+   "tags": [
+    "ATLAS",
+    "LLP",
+    "STAVE",
+    "barrel",
+    "ABCD",
+    "DNCn_QN"
+   ],
+   "slides": 18,
+   "thumb": "thumbs/s-01.jpg",
+   "files": {
+    "pdf": {
+     "path": "downloads/STAVE_barrel_ideas.pdf",
+     "name": "STAVE_barrel_ideas.pdf",
+     "bytes": 373353
+    },
+    "pptx": {
+     "path": "downloads/STAVE_barrel_ideas.pptx",
+     "name": "STAVE_barrel_ideas.pptx",
+     "bytes": 1626856
+    },
+    "html": {
+     "path": "downloads/STAVE_barrel_ideas_single_file.html",
+     "name": "STAVE_barrel_ideas_single_file.html",
+     "bytes": 5413718
     }
    }
   }
