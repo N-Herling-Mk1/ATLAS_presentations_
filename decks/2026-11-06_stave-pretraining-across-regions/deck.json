@@ -1,11 +1,11 @@
 {
  "id": "2026-11-06_stave-pretraining-across-regions",
  "title": "STAVE: pretrain the barrel across regions",
- "subtitle": "Endcap → barrel pretraining · idea, mechanics, motivation, effort, tests and sources · mk1",
+ "subtitle": "Endcap → barrel pretraining · idea, mechanics, pretraining vs. fine-tuning, motivation, effort, tests and sources · mk1",
  "author": "Nathan Herling",
  "date": "2026-11-06",
  "updated": "2026-11-06",
- "description": "Why the data-starved barrel could borrow the endcap's statistics. Today each region's NN1/NN2 pair is trained from scratch; the proposal pretrains on the endcap and fine-tunes on the barrel, with a shared-trunk variant that does both. What pretraining and fine-tuning look like, why the barrel needs them, per-region versus across-region pretraining, a guesstimate of the work, and the screens, paired grading and bias-import check that decide whether transfer helps. Sources on the last slide.",
+ "description": "Why the data-starved barrel could borrow the endcap's statistics. Today each region's NN1/NN2 pair is trained from scratch; the proposal pretrains on the endcap and fine-tunes on the barrel, with a shared-trunk variant that does both. What pretraining and fine-tuning look like and how they differ, why the barrel needs them, per-region versus across-region pretraining, a guesstimate of the work, and the screens, paired grading and bias-import check that decide whether transfer helps. Sources on the last slide.",
  "tags": [
   "ATLAS",
   "LLP",
@@ -23,6 +23,7 @@
   "pptx": "downloads/STAVE_pretraining_across_regions_mk1.pptx"
  },
  "notes": [
+  "",
   "",
   "",
   "",
