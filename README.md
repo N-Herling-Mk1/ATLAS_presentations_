@@ -10,7 +10,7 @@ It is a static site: plain HTML, CSS and JS, no build step to serve it, no frame
 
 | Date | Deck | Slides |
 |---|---|---|
-| 6 Nov 2026 | [STAVE: pretrain the barrel across regions](decks/2026-11-06_stave-pretraining-across-regions/) | 6 |
+| 6 Nov 2026 | [STAVE: pretrain the barrel across regions](decks/2026-11-06_stave-pretraining-across-regions/) | 7 |
 | 5 Nov 2026 | [LEXICON mk_1: does a detector event have a grammar?](decks/2026-11-05_lexicon-mk1/) | 49 |
 | 30 Oct 2026, updated 3 Nov 2026 | [DisCo + the queen: closure gained, AUC paid](decks/2026-11-03_qn2-disco-vs-queen/) | 20 |
 | 15 Oct 2026 | [BEAM (agent): PIPE and HALO, idea and plan](decks/2026-10-15_beam-agent-idea-and-plan/) | 18 |

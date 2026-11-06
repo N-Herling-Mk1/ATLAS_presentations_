@@ -2,11 +2,11 @@
 window.DECK = {
  "id": "2026-11-06_stave-pretraining-across-regions",
  "title": "STAVE: pretrain the barrel across regions",
- "subtitle": "Endcap → barrel pretraining · idea, mechanics, motivation, effort and tests · mk1",
+ "subtitle": "Endcap → barrel pretraining · idea, mechanics, motivation, effort, tests and sources · mk1",
  "author": "Nathan Herling",
  "date": "2026-11-06",
- "updated": "",
- "description": "Why the data-starved barrel could borrow the endcap's statistics. Today each region's NN1/NN2 pair is trained from scratch; the proposal pretrains on the endcap and fine-tunes on the barrel, with a shared-trunk variant that does both. What pretraining and fine-tuning look like, why the barrel needs them, per-region versus across-region pretraining, a guesstimate of the work, and the screens, paired grading and bias-import check that decide whether transfer helps.",
+ "updated": "2026-11-06",
+ "description": "Why the data-starved barrel could borrow the endcap's statistics. Today each region's NN1/NN2 pair is trained from scratch; the proposal pretrains on the endcap and fine-tunes on the barrel, with a shared-trunk variant that does both. What pretraining and fine-tuning look like, why the barrel needs them, per-region versus across-region pretraining, a guesstimate of the work, and the screens, paired grading and bias-import check that decide whether transfer helps. Sources on the last slide.",
  "tags": [
   "ATLAS",
   "LLP",
@@ -48,23 +48,28 @@ window.DECK = {
    "src": "slides/s-06.png",
    "thumb": "thumbs/s-06.jpg",
    "notes": ""
+  },
+  {
+   "src": "slides/s-07.png",
+   "thumb": "thumbs/s-07.jpg",
+   "notes": ""
   }
  ],
  "files": {
   "pdf": {
    "path": "downloads/STAVE_pretraining_across_regions_mk1.pdf",
    "name": "STAVE_pretraining_across_regions_mk1.pdf",
-   "bytes": 126134
+   "bytes": 137866
   },
   "html": {
    "path": "downloads/STAVE_pretraining_across_regions_mk1_single_file.html",
    "name": "STAVE_pretraining_across_regions_mk1_single_file.html",
-   "bytes": 575556
+   "bytes": 579796
   },
   "pptx": {
    "path": "downloads/STAVE_pretraining_across_regions_mk1.pptx",
    "name": "STAVE_pretraining_across_regions_mk1.pptx",
-   "bytes": 2546866
+   "bytes": 3022992
   }
  }
 };
