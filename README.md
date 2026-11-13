@@ -10,6 +10,9 @@ It is a static site: plain HTML, CSS and JS, no build step to serve it, no frame
 
 | Date | Deck | Slides |
 |---|---|---|
+| 13 Nov 2026 | [DisCo + the queen, endcap and barrel: closure gained, and how far it holds](https://n-herling-mk1.github.io/ATLAS_presentations_DNCn_QN/) (own repo: [ATLAS_presentations_DNCn_QN](https://github.com/N-Herling-Mk1/ATLAS_presentations_DNCn_QN)) | 22 |
+| 13 Nov 2026 | [TRUSS: what 376 training runs taught us](https://n-herling-mk1.github.io/ATLAS_presentations_TRUSS/) (own repo: [ATLAS_presentations_TRUSS](https://github.com/N-Herling-Mk1/ATLAS_presentations_TRUSS)) | 19 |
+| 13 Nov 2026 | [UNKNOT mk1: bottom line](https://n-herling-mk1.github.io/ATLAS_presentations_unKNOT/) (own repo: [ATLAS_presentations_unKNOT](https://github.com/N-Herling-Mk1/ATLAS_presentations_unKNOT)) | 23 |
 | 6 Nov 2026 | [STAVE: pretrain the barrel across regions](decks/2026-11-06_stave-pretraining-across-regions/) | 8 |
 | 5 Nov 2026 | [LEXICON mk_1: does a detector event have a grammar?](decks/2026-11-05_lexicon-mk1/) | 49 |
 | 30 Oct 2026, updated 3 Nov 2026 | [DisCo + the queen: closure gained, AUC paid](decks/2026-11-03_qn2-disco-vs-queen/) | 20 |
@@ -33,6 +36,9 @@ decks/<id>/
   slides/s-NN.png          slide images
   thumbs/s-NN.jpg          640 px thumbnails for the grid and the landing card
   downloads/               the .pdf, .pptx and single-file .html offered for download
+remotes/<id>/              decks that live in their own repos (see below)
+  remote.json              repo + Pages URL, overrides you set, and what was last read from the clone
+  thumb.jpg                first page of that repo's PDF, 640 px
 tools/deck_tool.py         adds decks and rebuilds the generated files
 ```
 
@@ -86,6 +92,25 @@ python tools/deck_tool.py list       # what is in the repo
 ```
 
 Then add a row to the table above and commit. GitHub rejects files over 100 MB; the tool stops on those and warns above 50 MB.
+
+## Decks in their own repos
+
+Some decks live in their own repo with their own player (`ATLAS_presentations_TRUSS`, `_unKNOT`, `_DNCn_QN`). They still get a card here: **Present** opens that repo's GitHub Pages site and the download buttons fetch from it, so nothing is copied into this repo except a small `remote.json` and a thumbnail. The card shows a link to the other repo.
+
+Clone the deck repo next to this one, then:
+
+```bash
+pip install pillow pymupdf          # thumbnail from the PDF's first page (or poppler's pdftoppm instead of pymupdf)
+
+python tools/deck_tool.py remote add ATLAS_presentations_TRUSS --tags "ATLAS,LLP,TRUSS"
+python tools/deck_tool.py remote refresh            # after any of those repos change: re-reads every clone
+python tools/deck_tool.py remote refresh 2026-11-13_truss
+python tools/deck_tool.py remote remove 2026-11-13_truss
+```
+
+What is read from the clone: the title from `index.html`'s `<title>`, the description from its `<meta name="description">` (else the README's first paragraph), the subtitle from the README's heading when it differs from the title, the downloads from `downloads/*.pdf|pptx|html`, the slide count from the PDF's pages, and the dates from the first and last commits. Any of these can be pinned with `--title`, `--date`, etc., or by editing the top-level fields in `remote.json`; a non-empty field there always wins over what was read. `refresh` only rewrites the `scan` block and the thumbnail.
+
+`build` does not need the clones: it uses what `remote.json` recorded. So the card only changes when you run `remote refresh` and commit; the download links always point at the live files in the other repo. Each deck repo needs GitHub Pages on (branch `main`, folder `/`), or Present and the downloads give 404.
 
 ## Publishing on GitHub Pages
 

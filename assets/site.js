@@ -1,4 +1,6 @@
 // Landing page: renders window.CATALOG (written by tools/deck_tool.py) as cards, newest first.
+// Decks stored here live in decks/<id>/. Decks with a `url` live in their own repo: the card links to that
+// repo's GitHub Pages site, and its download paths are already absolute.
 (function () {
   "use strict";
   const cat = window.CATALOG || { decks: [] };
@@ -25,20 +27,30 @@
   const TITLE = { pdf: "One slide per page", pptx: "PowerPoint file with speaker notes", html: "The player in one self-contained file" };
 
   function card(d) {
-    const base = "decks/" + d.id + "/";
-    const page = base + "index.html";                      // explicit file: folder links fail when opened from disk
-    const li = el("li", "card");
-    li.dataset.search = [d.title, d.subtitle, d.description, (d.tags || []).join(" "), d.date].join(" ").toLowerCase();
+    const remote = !!d.url;
+    const base = remote ? "" : "decks/" + d.id + "/";
+    const page = remote ? d.url : base + "index.html";     // explicit file: folder links fail when opened from disk
+    const repoName = remote && d.repo ? d.repo.replace(/^https:\/\/github\.com\/[^/]+\//, "") : "";
+    const li = el("li", "card" + (remote ? " remote" : ""));
+    li.dataset.search = [d.title, d.subtitle, d.description, (d.tags || []).join(" "), d.date, repoName].join(" ").toLowerCase();
 
-    const a = el("a", "thumb");
+    const a = el("a", "thumb" + (d.thumb ? "" : " blank"));
     a.href = page; a.setAttribute("aria-label", "Open " + d.title);
-    const im = el("img"); im.src = base + d.thumb; im.alt = ""; im.loading = "lazy";
-    a.appendChild(im); li.appendChild(a);
+    if (d.thumb) { const im = el("img"); im.src = base + d.thumb; im.alt = ""; im.loading = "lazy"; a.appendChild(im); }
+    else a.appendChild(el("span", "", d.title));
+    li.appendChild(a);
 
     const b = el("div", "body");
     const meta = [niceDate(d.date), d.slides + " slides"];
     if (d.updated && d.updated !== d.date) meta.splice(1, 0, "updated " + niceDate(d.updated));
-    b.appendChild(el("div", "meta", meta.join(" · ")));
+    if (!d.slides) meta.pop();
+    const m = el("div", "meta", meta.join(" · "));
+    if (remote && d.repo) {
+      const r = el("a", "repo", repoName + " ↗"); r.href = d.repo; r.target = "_blank"; r.rel = "noopener";
+      r.title = "This deck lives in its own repository";
+      m.append(" · "); m.appendChild(r);
+    }
+    b.appendChild(m);
     const h = el("h2"); const ha = el("a", "", d.title); ha.href = page; h.appendChild(ha); b.appendChild(h);
     if (d.subtitle) b.appendChild(el("p", "sub", d.subtitle));
     if (d.description) b.appendChild(el("p", "desc", d.description));
@@ -52,7 +64,9 @@
     ["pdf", "pptx", "html"].forEach((k) => {
       const f = d.files && d.files[k];
       if (!f) return;
-      const x = el("a", "btn"); x.href = base + f.path; x.setAttribute("download", f.name); x.title = TITLE[k];
+      const x = el("a", "btn"); x.href = base + f.path; x.title = TITLE[k];
+      if (remote) { x.target = "_blank"; x.rel = "noopener"; }  // browsers ignore `download` across origins
+      else x.setAttribute("download", f.name);
       x.append(LABEL[k] + " "); x.appendChild(el("small", "", mb(f.bytes)));
       act.appendChild(x);
     });

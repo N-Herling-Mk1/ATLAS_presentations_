@@ -1,0 +1,44 @@
+{
+  "repo": "https://github.com/N-Herling-Mk1/ATLAS_presentations_unKNOT",
+  "pages": "https://n-herling-mk1.github.io/ATLAS_presentations_unKNOT/",
+  "title": "",
+  "subtitle": "",
+  "author": "Nathan Herling",
+  "date": "",
+  "updated": "",
+  "description": "",
+  "tags": [
+    "ATLAS",
+    "LLP",
+    "UNKNOT",
+    "background",
+    "unsupervised"
+  ],
+  "scan": {
+    "title": "UNKNOT mk1 — bottom line",
+    "subtitle": "",
+    "description": "UNsupervised K-source Number and Origin Test. A plain-language deck on the first full UNKNOT run: is the ATLAS Run-3 muon-spectrometer vertex background one distribution, or several mixed together?",
+    "date": "2026-11-13",
+    "updated": "",
+    "slides": 23,
+    "files": {
+      "html": {
+        "path": "downloads/UNKNOT_mk1_bottom_line.html",
+        "name": "UNKNOT_mk1_bottom_line.html",
+        "bytes": 985745
+      },
+      "pdf": {
+        "path": "downloads/UNKNOT_mk1_bottom_line.pdf",
+        "name": "UNKNOT_mk1_bottom_line.pdf",
+        "bytes": 2411594
+      },
+      "pptx": {
+        "path": "downloads/UNKNOT_mk1_bottom_line.pptx",
+        "name": "UNKNOT_mk1_bottom_line.pptx",
+        "bytes": 4923105
+      }
+    },
+    "commit": "5c5fbb2",
+    "scanned": "2026-11-13"
+  }
+}

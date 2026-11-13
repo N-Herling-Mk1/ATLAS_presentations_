@@ -2,6 +2,113 @@
 window.CATALOG = {
  "decks": [
   {
+   "title": "DisCo + the queen, endcap and barrel: closure gained, and how far it holds",
+   "subtitle": "",
+   "author": "Nathan Herling",
+   "date": "2026-11-13",
+   "updated": "",
+   "description": "DNCn_QN mk2 against DisCo alone in both regions of the MS (R15 endcap, R16 barrel), with every layer of vetting and the caveats.",
+   "tags": [
+    "ATLAS",
+    "LLP",
+    "DisCo",
+    "ABCD",
+    "DNCn_QN",
+    "barrel"
+   ],
+   "id": "2026-11-13_dncn-qn",
+   "slides": 22,
+   "thumb": "remotes/2026-11-13_dncn-qn/thumb.jpg",
+   "url": "https://n-herling-mk1.github.io/ATLAS_presentations_DNCn_QN/",
+   "repo": "https://github.com/N-Herling-Mk1/ATLAS_presentations_DNCn_QN",
+   "files": {
+    "pdf": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_DNCn_QN/downloads/QN2_endcap_barrel.pdf",
+     "name": "QN2_endcap_barrel.pdf",
+     "bytes": 6859729
+    },
+    "pptx": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_DNCn_QN/downloads/QN2_endcap_barrel.pptx",
+     "name": "QN2_endcap_barrel.pptx",
+     "bytes": 10140231
+    },
+    "html": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_DNCn_QN/downloads/QN2_endcap_barrel_single_file.html",
+     "name": "QN2_endcap_barrel_single_file.html",
+     "bytes": 14586272
+    }
+   }
+  },
+  {
+   "title": "TRUSS: what 376 training runs taught us",
+   "subtitle": "TRUSS: is the network shape in use now the right one?",
+   "author": "Nathan Herling",
+   "date": "2026-11-13",
+   "updated": "",
+   "description": "TRUSS: an architecture search for the ATLAS Run-3 LLP endcap ABCD analysis, explained from the ground up.",
+   "tags": [
+    "ATLAS",
+    "LLP",
+    "TRUSS",
+    "architecture search",
+    "ABCD"
+   ],
+   "id": "2026-11-13_truss",
+   "slides": 19,
+   "thumb": "remotes/2026-11-13_truss/thumb.jpg",
+   "url": "https://n-herling-mk1.github.io/ATLAS_presentations_TRUSS/",
+   "repo": "https://github.com/N-Herling-Mk1/ATLAS_presentations_TRUSS",
+   "files": {
+    "html": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_TRUSS/downloads/truss_layman_mk1.html",
+     "name": "truss_layman_mk1.html",
+     "bytes": 581195
+    },
+    "pdf": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_TRUSS/downloads/truss_layman_mk1.pdf",
+     "name": "truss_layman_mk1.pdf",
+     "bytes": 4873659
+    }
+   }
+  },
+  {
+   "title": "UNKNOT mk1 — bottom line",
+   "subtitle": "",
+   "author": "Nathan Herling",
+   "date": "2026-11-13",
+   "updated": "",
+   "description": "UNsupervised K-source Number and Origin Test. A plain-language deck on the first full UNKNOT run: is the ATLAS Run-3 muon-spectrometer vertex background one distribution, or several mixed together?",
+   "tags": [
+    "ATLAS",
+    "LLP",
+    "UNKNOT",
+    "background",
+    "unsupervised"
+   ],
+   "id": "2026-11-13_unknot",
+   "slides": 23,
+   "thumb": "remotes/2026-11-13_unknot/thumb.jpg",
+   "url": "https://n-herling-mk1.github.io/ATLAS_presentations_unKNOT/",
+   "repo": "https://github.com/N-Herling-Mk1/ATLAS_presentations_unKNOT",
+   "files": {
+    "html": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_unKNOT/downloads/UNKNOT_mk1_bottom_line.html",
+     "name": "UNKNOT_mk1_bottom_line.html",
+     "bytes": 985745
+    },
+    "pdf": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_unKNOT/downloads/UNKNOT_mk1_bottom_line.pdf",
+     "name": "UNKNOT_mk1_bottom_line.pdf",
+     "bytes": 2411594
+    },
+    "pptx": {
+     "path": "https://n-herling-mk1.github.io/ATLAS_presentations_unKNOT/downloads/UNKNOT_mk1_bottom_line.pptx",
+     "name": "UNKNOT_mk1_bottom_line.pptx",
+     "bytes": 4923105
+    }
+   }
+  },
+  {
    "id": "2026-11-06_stave-pretraining-across-regions",
    "title": "STAVE: pretrain the barrel across regions",
    "subtitle": "Endcap → barrel pretraining · idea, mechanics, pretraining vs. fine-tuning, motivation, effort, tests and sources · mk1",

@@ -1,0 +1,39 @@
+{
+  "repo": "https://github.com/N-Herling-Mk1/ATLAS_presentations_TRUSS",
+  "pages": "https://n-herling-mk1.github.io/ATLAS_presentations_TRUSS/",
+  "title": "",
+  "subtitle": "",
+  "author": "Nathan Herling",
+  "date": "",
+  "updated": "",
+  "description": "",
+  "tags": [
+    "ATLAS",
+    "LLP",
+    "TRUSS",
+    "architecture search",
+    "ABCD"
+  ],
+  "scan": {
+    "title": "TRUSS: what 376 training runs taught us",
+    "subtitle": "TRUSS: is the network shape in use now the right one?",
+    "description": "TRUSS: an architecture search for the ATLAS Run-3 LLP endcap ABCD analysis, explained from the ground up.",
+    "date": "2026-11-13",
+    "updated": "",
+    "slides": 19,
+    "files": {
+      "html": {
+        "path": "downloads/truss_layman_mk1.html",
+        "name": "truss_layman_mk1.html",
+        "bytes": 581195
+      },
+      "pdf": {
+        "path": "downloads/truss_layman_mk1.pdf",
+        "name": "truss_layman_mk1.pdf",
+        "bytes": 4873659
+      }
+    },
+    "commit": "fc7a49d",
+    "scanned": "2026-11-13"
+  }
+}

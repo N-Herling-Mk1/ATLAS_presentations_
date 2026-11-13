@@ -1,0 +1,45 @@
+{
+  "repo": "https://github.com/N-Herling-Mk1/ATLAS_presentations_DNCn_QN",
+  "pages": "https://n-herling-mk1.github.io/ATLAS_presentations_DNCn_QN/",
+  "title": "",
+  "subtitle": "",
+  "author": "Nathan Herling",
+  "date": "",
+  "updated": "",
+  "description": "",
+  "tags": [
+    "ATLAS",
+    "LLP",
+    "DisCo",
+    "ABCD",
+    "DNCn_QN",
+    "barrel"
+  ],
+  "scan": {
+    "title": "DisCo + the queen, endcap and barrel: closure gained, and how far it holds",
+    "subtitle": "",
+    "description": "DNCn_QN mk2 against DisCo alone in both regions of the MS (R15 endcap, R16 barrel), with every layer of vetting and the caveats.",
+    "date": "2026-11-13",
+    "updated": "",
+    "slides": 22,
+    "files": {
+      "pdf": {
+        "path": "downloads/QN2_endcap_barrel.pdf",
+        "name": "QN2_endcap_barrel.pdf",
+        "bytes": 6859729
+      },
+      "pptx": {
+        "path": "downloads/QN2_endcap_barrel.pptx",
+        "name": "QN2_endcap_barrel.pptx",
+        "bytes": 10140231
+      },
+      "html": {
+        "path": "downloads/QN2_endcap_barrel_single_file.html",
+        "name": "QN2_endcap_barrel_single_file.html",
+        "bytes": 14586272
+      }
+    },
+    "commit": "427ee9d",
+    "scanned": "2026-11-13"
+  }
+}

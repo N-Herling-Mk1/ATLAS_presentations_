@@ -5,6 +5,8 @@
   python tools/deck_tool.py update ID SOURCE [options] # a new revision of an existing deck (keeps its metadata)
   python tools/deck_tool.py build                      # rewrite every deck's index.html + deck.js, and catalog.js
   python tools/deck_tool.py list                       # show the decks in the repo
+  python tools/deck_tool.py remote add REPO_FOLDER     # a card for a deck that lives in its own repo
+  python tools/deck_tool.py remote refresh [ID ...]    # re-read those repos' clones after they change
 
 SOURCE is a folder, a .zip, or a single one-file .html player. What is used from it:
   slides      a folder of slide images (slides/s-01.png ...); else the images embedded in the one-file HTML;
@@ -29,6 +31,7 @@ import argparse
 import datetime as dt
 import html
 import json
+import os
 import re
 import shutil
 import struct
@@ -409,8 +412,8 @@ def install_downloads(dest: Path, src: Source, stem: str, slides: list[Path], no
     return files
 
 
-def write_meta(dest: Path, meta: dict) -> None:
-    (dest / "deck.json").write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+def write_meta(dest: Path, meta: dict, name: str = "deck.json") -> None:
+    (dest / name).write_text(json.dumps(meta, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
 # ---------------------------------------------------------------- add
@@ -555,6 +558,279 @@ def make_thumbs(dest: Path) -> None:
         bar(i, len(slides), "thumbnails")
 
 
+# ---------------------------------------------------------------- decks that live in their own repos
+# A deck can also live in its own GitHub repo (e.g. ATLAS_presentations_TRUSS) with its own player on its own
+# GitHub Pages site. `remote add` reads a local clone of that repo once and records what the landing card needs in
+# remotes/<id>/remote.json (+ a first-slide thumbnail). The card's Present / PDF / PPTX / HTML buttons point at the
+# other repo's Pages site, so the files themselves are never copied here. `remote refresh` re-reads the clones after
+# those repos change. `build` never needs the clones.
+REMOTES = ROOT / "remotes"
+DL_KIND = {".pdf": "pdf", ".pptx": "pptx", ".html": "html", ".htm": "html"}
+HAND_KEYS = ("title", "subtitle", "author", "date", "updated", "description", "tags")
+
+
+def git_out(repo: Path, *args: str) -> str:
+    try:
+        r = subprocess.run(["git", "-C", str(repo), *args], capture_output=True, text=True, timeout=30)
+        return r.stdout.strip() if r.returncode == 0 else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def github_slug(url: str) -> tuple[str, str] | None:
+    m = re.search(r"github\.com[:/]([\w.-]+)/([\w.-]+?)(?:\.git)?/?$", url or "")
+    return (m.group(1), m.group(2)) if m else None
+
+
+def pdf_pages(pdf: Path) -> int | None:
+    try:
+        import fitz
+        with fitz.open(pdf) as doc:
+            return doc.page_count
+    except ImportError:
+        pass
+    if shutil.which("pdfinfo"):
+        m = re.search(r"^Pages:\s+(\d+)", subprocess.run(["pdfinfo", str(pdf)], capture_output=True, text=True).stdout, re.M)
+        if m:
+            return int(m.group(1))
+    n = len(re.findall(rb"/Type\s*/Page(?![s\w])", pdf.read_bytes()))   # crude, but right for simple PDFs
+    return n or None
+
+
+def pdf_first_page(pdf: Path, out_dir: Path) -> Path | None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        import fitz
+        with fitz.open(pdf) as doc:
+            page = doc[0]
+            zoom = 2 * THUMB_W / max(page.rect.width, 1)
+            p = out_dir / "p1.png"
+            page.get_pixmap(matrix=fitz.Matrix(zoom, zoom)).save(p)
+            return p
+    except ImportError:
+        pass
+    if shutil.which("pdftoppm"):
+        subprocess.run(["pdftoppm", "-f", "1", "-l", "1", "-singlefile", "-scale-to-x", str(2 * THUMB_W),
+                        "-scale-to-y", "-1", "-png", str(pdf), str(out_dir / "p1")], check=True)
+        return out_dir / "p1.png"
+    return None
+
+
+def meta_description(p: Path) -> str:
+    with open(p, "r", encoding="utf-8", errors="ignore") as f:
+        head = f.read(20000)
+    m = re.search(r"<meta\s+name=['\"]description['\"]\s+content=(['\"])(.*?)\1", head, re.S | re.I)
+    return html.unescape(m.group(2).strip()) if m else ""
+
+
+def readme_bits(clone: Path) -> tuple[str, str]:
+    """(H1, first line of the first paragraph after it) from README.md, markdown stripped."""
+    rd = next((p for p in (clone / "README.md", clone / "readme.md") if p.exists()), None)
+    if not rd:
+        return "", ""
+    plain = lambda s: re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", s).replace("**", "").replace("`", "").strip()
+    h1, para = "", ""
+    for line in rd.read_text(encoding="utf-8", errors="ignore").splitlines():
+        s = line.strip()
+        if not h1:
+            if s.startswith("# "):
+                h1 = plain(s[2:])
+            continue
+        if not s or s.startswith(("<", "#", "|", ">", "!", "-", "*  ", "```")):
+            if para:
+                break
+            continue
+        para = plain(s)
+        break
+    return h1, para
+
+
+def scan_remote(clone: Path, work: Path) -> tuple[dict, Path | None]:
+    """Read a deck repo's clone: title, blurb, dates, slide count, downloads, and an image for the thumbnail."""
+    page = clone / "index.html"
+    if not page.exists():
+        die(f"{clone}: no index.html at the top of the repo, so there is no player to link to")
+    h1, blurb = readme_bits(clone)
+    title = html_title(page) or h1 or clone.name
+    files: dict = {}
+    dl = clone / "downloads"
+    for p in sorted(dl.iterdir(), key=natural_key) if dl.is_dir() else []:
+        k = DL_KIND.get(p.suffix.lower())
+        if not k or not p.is_file():
+            continue
+        if k in files and not (k == "html" and "single_file" in p.name):   # prefer the *single_file*.html
+            continue
+        files[k] = {"path": f"downloads/{p.name}", "name": p.name, "bytes": p.stat().st_size}
+    slide_imgs = sorted([p for p in (clone / "slides").iterdir() if p.suffix.lower() in IMG_EXT],
+                        key=natural_key) if (clone / "slides").is_dir() else []
+    pdf = dl / files["pdf"]["name"] if "pdf" in files else None
+    slides = (pdf_pages(pdf) if pdf else None) or len(slide_imgs) or None
+    image = None
+    if pdf:
+        try:
+            image = pdf_first_page(pdf, work)
+        except (subprocess.SubprocessError, RuntimeError, OSError) as e:
+            warn(f"could not render page 1 of {pdf.name}: {e}")
+    if image is None and slide_imgs:
+        image = slide_imgs[0]
+    if image is None:
+        image = next((clone / c for c in ("assets/logo.webp", "assets/logo.png", "logo.png", "favicon.png",
+                                          "assets/favicon.png") if (clone / c).exists()), None)
+    first_c = git_out(clone, "log", "--reverse", "--format=%cs").splitlines()
+    last_c = git_out(clone, "log", "-1", "--format=%cs")
+    scan = {
+        "title": title,
+        "subtitle": h1 if h1 and h1 != title else "",
+        "description": meta_description(page) or blurb,
+        "date": first_c[0] if first_c else dt.date.today().isoformat(),
+        "updated": last_c,
+        "slides": slides,
+        "files": files,
+        "commit": git_out(clone, "rev-parse", "--short", "HEAD"),
+        "scanned": dt.date.today().isoformat(),
+    }
+    if scan["updated"] == scan["date"]:
+        scan["updated"] = ""
+    return scan, image
+
+
+def save_remote_thumb(dest: Path, image: Path | None) -> str:
+    for old in dest.glob("thumb.*"):
+        old.unlink()
+    if image is None:
+        warn("no PDF, slide image or logo found: the card will have no picture")
+        return ""
+    if Image is None:
+        warn("Pillow not installed (pip install pillow): using the image at full size as the thumbnail")
+        shutil.copy2(image, dest / ("thumb" + image.suffix.lower()))
+        return "thumb" + image.suffix.lower()
+    with Image.open(image) as im:
+        im = im.convert("RGBA")
+        bg = Image.new("RGB", im.size, "white")
+        bg.paste(im, mask=im.split()[3])
+        bg.thumbnail((THUMB_W, THUMB_W), Image.LANCZOS)
+        bg.save(dest / "thumb.jpg", "JPEG", quality=82, optimize=True)
+    return "thumb.jpg"
+
+
+def remote_clone(meta: dict) -> Path:
+    """Where the clone is: remote.json's "clone" (relative to this repo), else a sibling folder named like the repo."""
+    if meta.get("clone"):
+        return (ROOT / meta["clone"]).resolve()
+    slug = github_slug(meta.get("repo", ""))
+    return (ROOT.parent / slug[1]).resolve() if slug else ROOT.parent / "?"
+
+
+def remote_summary(dest: Path) -> dict:
+    meta = json.loads((dest / "remote.json").read_text(encoding="utf-8"))
+    scan = meta.get("scan") or {}
+    pages = meta["pages"].rstrip("/") + "/"
+    d = {k: (meta.get(k) or scan.get(k) or ([] if k == "tags" else "")) for k in HAND_KEYS}
+    thumb = next((p.name for p in sorted(dest.glob("thumb.*"))), "")
+    d.update({
+        "id": dest.name,
+        "slides": scan.get("slides") or 0,
+        "thumb": f"remotes/{dest.name}/{thumb}" if thumb else "",
+        "url": pages,
+        "repo": meta.get("repo", ""),
+        "files": {k: {"path": pages + f["path"], "name": f["name"], "bytes": f["bytes"]}
+                  for k, f in (scan.get("files") or {}).items()},
+    })
+    return d
+
+
+def cmd_remote_add(a: argparse.Namespace) -> None:
+    S = 4
+    step(1, S, f"Finding the clone of {a.source}")
+    p = Path(a.source)
+    clone = (p if p.is_dir() else ROOT.parent / a.source).resolve()
+    if not clone.is_dir():
+        die(f"no folder {a.source} (looked in {ROOT.parent}); clone the repo next to this one or give its path")
+    if clone == ROOT.resolve():
+        die("that is this repo; use `add` for decks stored here")
+    origin = git_out(clone, "remote", "get-url", "origin")
+    slug = github_slug(a.repo or origin)
+    if not slug:
+        die(f"{clone.name}: origin is not a GitHub URL ({origin or 'none'}); pass --repo https://github.com/<owner>/<repo>")
+    owner, repo = slug
+    pages = a.pages or f"https://{owner.lower()}.github.io/{repo}/"
+    info(f"clone  : {clone}")
+    info(f"repo   : https://github.com/{owner}/{repo}")
+    info(f"pages  : {pages}")
+
+    step(2, S, "Reading title, downloads, slide count and dates")
+    with tempfile.TemporaryDirectory() as tmp:
+        scan, image = scan_remote(clone, Path(tmp))
+        stem = re.sub(r"^atlas_presentations_", "", repo, flags=re.I)
+        deck_id = a.id or f"{a.date or scan['date']}_{slugify(stem)}"
+        dest = REMOTES / deck_id
+        if dest.exists() and not a.force:
+            die(f"remotes/{deck_id} already exists: use `remote refresh {deck_id}`, or --force to start it over")
+        if (DECKS / deck_id).exists():
+            die(f"decks/{deck_id} already exists here; pick another --id")
+        shutil.rmtree(dest, ignore_errors=True)
+        dest.mkdir(parents=True)
+        info(f"id     : {deck_id}")
+        info(f"title  : {a.title or scan['title']}")
+        info(f"slides : {scan['slides'] or '?'}   downloads: {', '.join(scan['files']) or 'none'}")
+
+        step(3, S, "Making the thumbnail")
+        save_remote_thumb(dest, image)
+
+    step(4, S, "Writing remote.json and catalog.js")
+    meta = {
+        "repo": f"https://github.com/{owner}/{repo}", "pages": pages,
+        "title": a.title or "", "subtitle": a.subtitle or "", "author": a.author or "Nathan Herling",
+        "date": a.date or "", "updated": a.updated or "", "description": a.description or "",
+        "tags": [t.strip() for t in (a.tags or "").split(",") if t.strip()] or ["ATLAS", stem],
+        "scan": scan,
+    }
+    if p.is_dir() and clone != (ROOT.parent / repo).resolve():
+        meta["clone"] = os.path.relpath(clone, ROOT)
+    write_meta(dest, meta, "remote.json")
+    write_catalog()
+    print(f"\nDone: remotes/{deck_id}/. Open index.html to check the card, then commit remotes/ and catalog.js.")
+
+
+def cmd_remote_refresh(a: argparse.Namespace) -> None:
+    dirs = sorted(d for d in REMOTES.iterdir() if (d / "remote.json").exists()) if REMOTES.exists() else []
+    if a.ids:
+        missing = set(a.ids) - {d.name for d in dirs}
+        if missing:
+            die(f"no such remote deck(s): {', '.join(sorted(missing))}")
+        dirs = [d for d in dirs if d.name in a.ids]
+    if not dirs:
+        die("no remote decks yet; add one with: remote add <repo-folder>")
+    step(1, 2, f"Re-reading {len(dirs)} clone(s)")
+    for i, dest in enumerate(dirs, 1):
+        meta = json.loads((dest / "remote.json").read_text(encoding="utf-8"))
+        clone = remote_clone(meta)
+        if not clone.is_dir():
+            warn(f"{dest.name}: clone not found at {clone}; kept the old record (git clone it there, or set \"clone\")")
+            continue
+        if git_out(clone, "status", "--porcelain"):
+            warn(f"{dest.name}: {clone.name} has uncommitted changes; the card describes the working copy, not what is on GitHub")
+        old = meta.get("scan") or {}
+        with tempfile.TemporaryDirectory() as tmp:
+            meta["scan"], image = scan_remote(clone, Path(tmp))
+            save_remote_thumb(dest, image)
+        write_meta(dest, meta, "remote.json")
+        changed = [k for k in ("title", "slides", "files", "updated", "commit") if old.get(k) != meta["scan"].get(k)]
+        bar(i, len(dirs), f"{dest.name}: " + (", ".join(changed) + " changed" if changed else "no change"))
+    step(2, 2, "Writing catalog.js")
+    write_catalog()
+    print("Done. Commit remotes/ and catalog.js.")
+
+
+def cmd_remote_remove(a: argparse.Namespace) -> None:
+    dest = REMOTES / a.id
+    if not (dest / "remote.json").exists():
+        die(f"no such remote deck: {a.id}")
+    shutil.rmtree(dest)
+    write_catalog()
+    print(f"Removed remotes/{a.id}/ from the landing page (the other repo is untouched).")
+
+
 # ---------------------------------------------------------------- build
 def file_entry(dest: Path, rel: str) -> dict | None:
     p = dest / rel
@@ -601,6 +877,8 @@ def build_deck(dest: Path) -> dict:
 def write_catalog() -> list[dict]:
     decks = sorted([d for d in DECKS.iterdir() if (d / "deck.json").exists()]) if DECKS.exists() else []
     out = [build_deck(d) for d in decks]
+    remotes = sorted(d for d in REMOTES.iterdir() if (d / "remote.json").exists()) if REMOTES.exists() else []
+    out += [remote_summary(d) for d in remotes]
     out.sort(key=lambda d: d.get("updated") or d.get("date") or "", reverse=True)
     (ROOT / "catalog.js").write_text(
         "// Generated by tools/deck_tool.py. Do not edit; run: python tools/deck_tool.py build\n"
@@ -611,7 +889,8 @@ def write_catalog() -> list[dict]:
 
 def cmd_build(_a) -> None:
     decks = [d for d in DECKS.iterdir() if (d / "deck.json").exists()] if DECKS.exists() else []
-    step(1, 1, f"Rebuilding {len(decks)} deck(s) and catalog.js")
+    nr = len(list(REMOTES.glob("*/remote.json"))) if REMOTES.exists() else 0
+    step(1, 1, f"Rebuilding {len(decks)} deck(s) and catalog.js" + (f" (+ {nr} from other repos, as last read)" if nr else ""))
     out = write_catalog()
     for i, d in enumerate(out, 1):
         bar(i, len(out), d["id"])
@@ -627,6 +906,11 @@ def cmd_list(_a) -> None:
         n = len([p for p in (j.parent / "slides").iterdir() if p.suffix.lower() in IMG_EXT])
         dl = ", ".join(d.get("files") or {}) or "none"
         print(f"{d.get('updated') or d.get('date')}  {j.parent.name}  ({n} slides; downloads: {dl})\n    {d.get('title')}")
+    for j in sorted(REMOTES.glob("*/remote.json")) if REMOTES.exists() else []:
+        d = remote_summary(j.parent)
+        sc = json.loads(j.read_text(encoding="utf-8")).get("scan") or {}
+        print(f"{d['updated'] or d['date']}  {d['id']}  [other repo: {d['repo']}]  ({d['slides']} slides; "
+              f"downloads: {', '.join(d['files']) or 'none'}; read {sc.get('scanned', '?')} at {sc.get('commit') or '?'})\n    {d['title']}")
 
 
 def main() -> None:
@@ -658,6 +942,26 @@ def main() -> None:
     up.set_defaults(fn=cmd_update)
     sub.add_parser("build", help="regenerate deck pages and catalog.js").set_defaults(fn=cmd_build)
     sub.add_parser("list", help="list decks").set_defaults(fn=cmd_list)
+    rm = sub.add_parser("remote", help="decks that live in their own repos (cards here, files there)")
+    rsub = rm.add_subparsers(dest="rcmd", required=True)
+    ra = rsub.add_parser("add", help="add a card for a deck repo, read from its local clone")
+    ra.add_argument("source", help="the clone's folder, or just its name if it sits next to this repo")
+    ra.add_argument("--id", help="folder name under remotes/ (default: <first-commit date>_<repo suffix>)")
+    ra.add_argument("--repo", help="https://github.com/<owner>/<repo> (default: the clone's origin)")
+    ra.add_argument("--pages", help="its GitHub Pages URL (default: https://<owner>.github.io/<repo>/)")
+    for f in ("--title", "--subtitle", "--author", "--description"):
+        ra.add_argument(f, help="(default: read from the repo)" if f != "--author" else "(default: Nathan Herling)")
+    ra.add_argument("--date", help="YYYY-MM-DD (default: the repo's first commit)")
+    ra.add_argument("--updated", help="YYYY-MM-DD (default: the repo's last commit)")
+    ra.add_argument("--tags", help="comma separated")
+    ra.add_argument("--force", action="store_true", help="replace an existing card with the same id")
+    ra.set_defaults(fn=cmd_remote_add)
+    rr = rsub.add_parser("refresh", help="re-read the clones (after those repos change) and rebuild catalog.js")
+    rr.add_argument("ids", nargs="*", help="which remote decks (default: all)")
+    rr.set_defaults(fn=cmd_remote_refresh)
+    rx = rsub.add_parser("remove", help="drop a remote deck's card")
+    rx.add_argument("id")
+    rx.set_defaults(fn=cmd_remote_remove)
     a = ap.parse_args()
     a.fn(a)
 
